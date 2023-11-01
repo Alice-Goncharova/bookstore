@@ -1,30 +1,38 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-
-# Create your models here.
 class ApiUser(AbstractUser):
+    USER_TYPE_CHOICES = (
+        ('supplier', 'Supplier'),
+        ('consumer', 'Consumer'),
+    )
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES)
     ...
 
+class Warehouse(models.Model):
+    warehouse_name = models.CharField(max_length=128)
 
-class Hotel(models.Model):
+    def __str__(self):
+        return f"{self.id}: {self.warehouse_name}"
+
+class Product(models.Model):
     name = models.CharField(max_length=128)
+    warehouse = models.ForeignKey(Warehouse, related_name='products', on_delete=models.CASCADE)
+    count = models.PositiveIntegerField()
+
+    def ship(self, count):
+        count = int(count)
+        self.count += count
+        self.save()
+
+    def receive(self, count):
+        count = int(count)
+        if count > self.count:
+            raise ValueError("Not enough products in stock")
+        self.count -= count
+        self.save()
 
     def __str__(self):
-        return f"{self.id}: {self.name}"
+        return f"{self.warehouse.warehouse_name}. Product: {self.name}"
 
 
-class Room(models.Model):
-    num = models.PositiveIntegerField()
-    hotel = models.ForeignKey(Hotel, related_name="rooms", on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.hotel.name}. Room num: {self.num}"
-
-
-class Booking(models.Model):
-    room = models.ForeignKey(Room, related_name='bookings', on_delete=models.CASCADE)
-    user = models.ForeignKey(ApiUser, related_name='bookings', on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.user.username}; {self.room.hotel.name}; {self.room.num}"

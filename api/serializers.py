@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework import validators
 
-from api.models import ApiUser, Hotel, Room, Booking
+from api.models import ApiUser, Warehouse, Product
 
 
 class UserSerializer(serializers.Serializer):
@@ -12,6 +12,7 @@ class UserSerializer(serializers.Serializer):
         validators.UniqueValidator(ApiUser.objects.all())
     ])
     password = serializers.CharField(min_length=6, max_length=20, write_only=True)
+    user_type = serializers.ChoiceField(choices=ApiUser.USER_TYPE_CHOICES)
 
     def update(self, instance, validated_data):
         if email := validated_data.get("email"):
@@ -27,6 +28,7 @@ class UserSerializer(serializers.Serializer):
         user = ApiUser.objects.create(
             email=validated_data["email"],
             username=validated_data["username"],
+            user_type=validated_data["user_type"],
         )
 
         user.set_password(validated_data["password"])
@@ -34,22 +36,15 @@ class UserSerializer(serializers.Serializer):
         return user
 
 
-class HotelSerializer(serializers.ModelSerializer):
+class WarehouseSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Hotel
+        model = Warehouse
         fields = "__all__"
         extra_kwargs = {"id": {"read_only": True}}
 
 
-class RoomSerializer(serializers.ModelSerializer):
+class ProductSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Room
-        fields = "__all__"
-        extra_kwargs = {"id": {"read_only": True}}
-
-
-class BookingSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Booking
+        model = Product
         fields = "__all__"
         extra_kwargs = {"id": {"read_only": True}}
