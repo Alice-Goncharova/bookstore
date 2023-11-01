@@ -1,12 +1,11 @@
-# Импорт библиотек 
+# Импорт библиотек
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
-from api.models import ApiUser, Hotel, Room, Booking
-from api.serializers import UserSerializer, HotelSerializer, RoomSerializer, BookingSerializer
-
+from api.models import ApiUser, Warehouse, Product
+from api.serializers import UserSerializer, WarehouseSerializer, ProductSerializer
 
 class UserModelViewSet(viewsets.ModelViewSet):
     queryset = ApiUser.objects.all()
@@ -17,24 +16,58 @@ class UserModelViewSet(viewsets.ModelViewSet):
     permission_classes = []
 
 
-class HotelModelViewSet(viewsets.ModelViewSet):
-    queryset = Hotel.objects.all()
-    serializer_class = HotelSerializer
+class WarehouseModelViewSet(viewsets.ModelViewSet):
+    queryset = Warehouse.objects.all()
+    serializer_class = WarehouseSerializer
 
-    @action(detail=True)
-    def rooms(self, request, pk=None):
-        hotel = get_object_or_404(Hotel.objects.all(), id=pk)
-        free_rooms = hotel.rooms.filter(bookings__isnull=True)
-        return Response(
-            RoomSerializer(free_rooms, many=True).data
-        )
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        if user.user_type == 'consumer':
+            return Response({'detail': 'Consumers are not allowed to create warehouses'}, status=403)
+        return super().create(request, *args, **kwargs)
 
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 
-class RoomModelViewSet(viewsets.ModelViewSet):
-    queryset = Room.objects.all()
-    serializer_class = RoomSerializer
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        if user.user_type == 'supplier':
+            return Response({'detail': 'Suppliers are not allowed to create products'}, status=403)
+        return super().create(request, *args, **kwargs)
 
+    @action(detail=True, methods=['post'])
+    def ship_product(self, request, pk=None):
+        user = request.user
+        if user.user_type != 'supplier':
+            return Response({'detail': 'Only suppliers can ship products'}, status=403)
 
-class BookingModelViewSet(viewsets.ModelViewSet):
-    queryset = Booking.objects.all()
-    serializer_class = BookingSerializer
+        product = self.get_object()
+        count = request.data.get('count')
+
+        if count is None:
+            return Response({'detail': 'Count parameter is required'}, status=400)
+
+        try:
+            product.ship(count)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=400)
+
+        return Response({'detail': 'Product shipped successfully'})
+
+    @action(detail=True, methods=['post'])
+    def receive_product(self, request, pk=None):
+        user = request.user
+        if user.user_type != 'consumer':
+            return Response({'detail': 'Only consumers can receive products'}, status=403)
+
+        product = self.get_object()
+        count = request.data.get('count')
+
+        if count is None:
+            return Response({'detail': 'Count parameter is required'}, status=400)
+
+        product.receive(count)
+
+        return Response({'detail': 'Product received successfully'})
+
