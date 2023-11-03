@@ -11,7 +11,8 @@ class UserSerializer(serializers.Serializer):
     email = serializers.EmailField(validators=[
         validators.UniqueValidator(ApiUser.objects.all())
     ])
-    password = serializers.CharField(min_length=6, max_length=20, write_only=True)
+    password = serializers.CharField(min_length=6, \
+                                     max_length=20, write_only=True)
     user_type = serializers.ChoiceField(choices=ApiUser.USER_TYPE_CHOICES)
 
     def update(self, instance, validated_data):
@@ -36,15 +37,14 @@ class UserSerializer(serializers.Serializer):
         return user
 
 
-class WarehouseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Warehouse
-        fields = "__all__"
-        extra_kwargs = {"id": {"read_only": True}}
+class WarehouseSerializer(serializers.Serializer):
+    warehouse_name = serializers.CharField(max_length=300, validators=[
+        validators.UniqueValidator(Warehouse.objects.all())])
 
 
-class ProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = "__all__"
-        extra_kwargs = {"id": {"read_only": True}}
+class ProductSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200, validators=[
+        validators.UniqueValidator(Product.objects.all())
+    ])
+    count = serializers.IntegerField()
+    warehouse = serializers.PrimaryKeyRelatedField(queryset=Warehouse.objects.all())
