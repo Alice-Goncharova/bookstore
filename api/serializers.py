@@ -41,10 +41,14 @@ class WarehouseSerializer(serializers.Serializer):
     warehouse_name = serializers.CharField(max_length=300, validators=[
         validators.UniqueValidator(Warehouse.objects.all())])
 
-
+    def create(self, validated_data):
+        return Warehouse.objects.create(**validated_data)
 class ProductSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200, validators=[
         validators.UniqueValidator(Product.objects.all())
     ])
     count = serializers.IntegerField()
     warehouse = serializers.PrimaryKeyRelatedField(queryset=Warehouse.objects.all())
+
+    def create(self, validated_data):
+        return Product.objects.create(**validated_data)
